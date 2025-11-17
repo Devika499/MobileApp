@@ -103,25 +103,29 @@ object AppModule {
     ): AuthRepository {
         return AuthRepository(apiService, database.userDao(), preferencesManager)
     }
-    
+
     @Provides
     @Singleton
     fun provideItemRepository(
         apiService: ApiService,
-        database: AppDatabase
+        database: AppDatabase,
+        @ApplicationContext context: Context
     ): ItemRepository {
-        return ItemRepository(apiService, database.itemDao())
+        return ItemRepository(
+            apiService = apiService,
+            itemDao = database.itemDao(),
+            context = context
+        )
     }
-    
+
+
+
     @Provides
     @Singleton
-    fun provideSwapRequestRepository(
-        apiService: ApiService,
-        database: AppDatabase
-    ): SwapRequestRepository {
-        return SwapRequestRepository(apiService, database.swapRequestDao())
+    fun provideSwapRequestRepository(apiService: ApiService): SwapRequestRepository {
+        return SwapRequestRepository(apiService)
     }
-    
+
     @Provides
     @Singleton
     fun provideChatRepository(

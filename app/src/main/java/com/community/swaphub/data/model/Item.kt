@@ -6,26 +6,22 @@ import com.google.gson.annotations.SerializedName
 
 @Entity(tableName = "items")
 data class Item(
-    @PrimaryKey
-    val id: String, // UUID as String - non-null for Room
+    @PrimaryKey val id: String,
     val title: String,
     val description: String? = null,
-    val category: String? = null, // Backend uses String, not enum
-    val type: ItemType,
-    @SerializedName("imageUrl")
-    val imageUrl: String? = null,
+    val category: String? = null,
+    @SerializedName("type") val type: ItemType? = ItemType.SWAP, // make safe
+    @SerializedName("imageUrl") val imageUrl: String? = null,
     val location: String? = null,
-    val latitude: Double? = null, // Backend has latitude
-    val longitude: Double? = null, // Backend has longitude
-    @SerializedName("status")
-    val status: ItemStatus = ItemStatus.AVAILABLE,
-    @SerializedName("isActive")
-    val isActive: Boolean = true,
-    @SerializedName("createdAt")
-    val createdAt: String? = null,
-    // Backend returns user object, but we'll extract these for convenience
-    @SerializedName("ownerId")
-    val ownerId: String? = null, // Extracted from user object
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+
+    // ✅ Backend doesn't send this field — so we allow null and default it safely in code
+    @SerializedName("status") val status: ItemStatus? = ItemStatus.AVAILABLE,
+
+    @SerializedName("isActive") val isActive: Boolean = true,
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("ownerId") val ownerId: String? = null,
     val ownerName: String? = null
 )
 
@@ -36,8 +32,9 @@ enum class ItemType {
 
 enum class ItemStatus {
     AVAILABLE,
-    SWAPPED, // Backend uses SWAPPED, not COMPLETED
-    PENDING_SWAP // Backend uses PENDING_SWAP, not PENDING
+    SWAPPED,
+    PENDING_SWAP,
+    DELETED
 }
 
 data class PostItemRequest(
@@ -49,4 +46,3 @@ data class PostItemRequest(
     val latitude: Double? = null,
     val longitude: Double? = null
 )
-

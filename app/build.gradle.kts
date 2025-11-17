@@ -60,7 +60,7 @@ dependencies {
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.3")
-
+    implementation("com.google.accompanist:accompanist-flowlayout:0.34.0")
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")

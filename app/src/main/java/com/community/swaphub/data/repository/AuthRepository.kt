@@ -4,7 +4,6 @@ import com.community.swaphub.data.api.ApiService
 import com.community.swaphub.data.local.dao.UserDao
 import com.community.swaphub.data.model.AuthResponse
 import com.community.swaphub.data.model.LoginRequest
-import com.community.swaphub.data.model.RegisterRequest
 import com.community.swaphub.data.model.User
 import com.community.swaphub.util.PreferencesManager
 import kotlinx.coroutines.flow.Flow
@@ -18,13 +17,14 @@ class AuthRepository @Inject constructor(
     private val userDao: UserDao,
     private val preferencesManager: PreferencesManager
 ) {
+
     // ------------------ REGISTER ------------------
-    suspend fun register(name: String, email: String, password: String, location: String?): Result<AuthResponse> {
+    suspend fun register(
+        name: String, email: String, password: String, location: String?
+    ): Result<AuthResponse> {
         return try {
-            // Backend expects a User object for registration
-            // Use placeholder ID - backend will generate the real UUID
             val user = User(
-                id = "", // Placeholder - backend will generate UUID
+                id = "",
                 name = name,
                 email = email,
                 password = password,
@@ -35,16 +35,11 @@ class AuthRepository @Inject constructor(
 
             if (response.isSuccessful && response.body() != null) {
                 val savedUser = response.body()!!
-                
-                // Save user to local database
                 userDao.insertUser(savedUser)
                 preferencesManager.saveUserId(savedUser.id)
                 preferencesManager.saveUserEmail(savedUser.email)
 
-                // After registration, we need to login to get the token
-                // Backend registration doesn't return a token, so we login
-                val loginResult = login(email, password)
-                return loginResult
+                login(email, password)
             } else {
                 Result.failure(Exception(response.errorBody()?.string() ?: "Registration failed"))
             }
@@ -56,38 +51,26 @@ class AuthRepository @Inject constructor(
     // ------------------ LOGIN ------------------
     suspend fun login(email: String, password: String): Result<AuthResponse> {
         return try {
-            val request = LoginRequest(email, password)
-            val response = apiService.login(request)
+            val response = apiService.login(LoginRequest(email, password))
 
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!
 
-                // Backend returns {token, userId}, not user object
-                // We need to fetch the user separately
                 authResponse.userId?.let { userId ->
                     preferencesManager.saveUserId(userId)
                     preferencesManager.saveUserEmail(email)
-                    
-                    // Fetch user details
-                    try {
-                        val userResponse = apiService.getUser(userId)
-                        if (userResponse.isSuccessful && userResponse.body() != null) {
-                            val user = userResponse.body()!!
-                            userDao.insertUser(user)
-                        }
-                    } catch (e: Exception) {
-                        // If fetching user fails, we still have the token and userId
-                        // User can be fetched later
+
+                    val userResponse = apiService.getUser(userId)
+                    if (userResponse.isSuccessful && userResponse.body() != null) {
+                        userDao.insertUser(userResponse.body()!!)
                     }
                 }
 
-                authResponse.token?.let { token ->
-                    preferencesManager.saveAuthToken(token)
-                }
+                authResponse.token?.let { preferencesManager.saveAuthToken(it) }
 
                 Result.success(authResponse)
             } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Login failed"))
+                Result.failure(Exception("Login failed"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -103,15 +86,36 @@ class AuthRepository @Inject constructor(
     // ------------------ CURRENT USER ------------------
     fun getCurrentUser(): Flow<User?> {
         return preferencesManager.userId.flatMapLatest { userId ->
-            userId?.let { userDao.getUserById(it) } ?: flowOf(null)
+            if (userId != null) userDao.getUserById(userId) else flowOf(null)
         }
     }
 
-    suspend fun getCurrentUserId(): String? {
-        return preferencesManager.userId.first()
+    suspend fun refreshCurrentUserIfNeeded() {
+        val userId = preferencesManager.userId.first() ?: return
+
+        try {
+            val response = apiService.getUser(userId)
+            if (response.isSuccessful && response.body() != null) {
+                userDao.insertUser(response.body()!!)
+            }
+        } catch (_: Exception) { }
     }
 
-    suspend fun isLoggedIn(): Boolean {
-        return preferencesManager.authToken.first() != null
+    // ------------------ UPDATE USER DETAILS ------------------
+    suspend fun updateUser(updatedUser: User): Result<User> {
+        return try {
+            val response = apiService.updateUser(updatedUser.id, updatedUser)
+
+            if (response.isSuccessful && response.body() != null) {
+                val saved = response.body()!!
+                userDao.insertUser(saved)
+                Result.success(saved)
+            } else {
+                Result.failure(Exception("Failed to update user"))
+            }
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

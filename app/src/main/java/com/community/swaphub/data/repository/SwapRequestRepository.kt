@@ -1,7 +1,6 @@
 package com.community.swaphub.data.repository
 
 import com.community.swaphub.data.api.ApiService
-import com.community.swaphub.data.local.dao.SwapRequestDao
 import com.community.swaphub.data.model.CreateSwapRequest
 import com.community.swaphub.data.model.SwapRequest
 import kotlinx.coroutines.flow.Flow
@@ -9,30 +8,37 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
 class SwapRequestRepository @Inject constructor(
-    private val apiService: ApiService,
-    private val swapRequestDao: SwapRequestDao
+    private val apiService: ApiService
 ) {
-    suspend fun createSwapRequest(request: CreateSwapRequest): Result<SwapRequest> {
+    suspend fun createSwapRequest(requestedItemId: String, requesterId: String): Result<SwapRequest> {
         return try {
+            if (requestedItemId.isBlank() || requesterId.isBlank()) {
+                return Result.failure(Exception("Item ID and Requester ID cannot be empty"))
+            }
+
+            val request = CreateSwapRequest(
+                requestedItemId = requestedItemId,
+                requesterId = requesterId
+            )
+
             val response = apiService.createSwapRequest(request)
             if (response.isSuccessful && response.body() != null) {
                 val swapRequest = response.body()!!
-                swapRequestDao.insertSwapRequest(swapRequest)
                 Result.success(swapRequest)
             } else {
-                Result.failure(Exception(response.message() ?: "Failed to create swap request"))
+                val errorBody = response.errorBody()?.string() ?: response.message()
+                Result.failure(Exception(errorBody ?: "Failed to create swap request"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    
+
     fun getMySwapRequests(): Flow<Result<List<SwapRequest>>> = flow {
         try {
-            val response = apiService.getMySwapRequests() // Backend uses /my-swaps endpoint
+            val response = apiService.getMySwapRequests()
             if (response.isSuccessful && response.body() != null) {
                 val requests = response.body()!!
-                requests.forEach { swapRequestDao.insertSwapRequest(it) }
                 emit(Result.success(requests))
             } else {
                 emit(Result.failure(Exception(response.message() ?: "Failed to fetch swap requests")))
@@ -41,13 +47,26 @@ class SwapRequestRepository @Inject constructor(
             emit(Result.failure(e))
         }
     }
-    
-    suspend fun acceptSwapRequest(id: String): Result<SwapRequest> { // UUID as String
+
+    fun getMyRequestedItems(): Flow<Result<List<SwapRequest>>> = flow {
+        try {
+            val response = apiService.getMyRequestedItems()
+            if (response.isSuccessful && response.body() != null) {
+                val requests = response.body()!!
+                emit(Result.success(requests))
+            } else {
+                emit(Result.failure(Exception(response.message() ?: "Failed to fetch your requested items")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
+    suspend fun acceptSwapRequest(id: String): Result<SwapRequest> {
         return try {
             val response = apiService.acceptSwapRequest(id)
             if (response.isSuccessful && response.body() != null) {
                 val swapRequest = response.body()!!
-                swapRequestDao.updateSwapRequest(swapRequest)
                 Result.success(swapRequest)
             } else {
                 Result.failure(Exception(response.message() ?: "Failed to accept swap request"))
@@ -56,19 +75,19 @@ class SwapRequestRepository @Inject constructor(
             Result.failure(e)
         }
     }
-    
-    suspend fun declineSwapRequest(id: String): Result<SwapRequest> { // UUID as String
-        // Backend doesn't have decline endpoint, only accept and complete
-        // This would need to be handled differently or removed
+
+    suspend fun declineSwapRequest(id: String): Result<SwapRequest> {
+        // Since backend doesn't have decline endpoint, we'll return an error
+        // You could implement a custom solution like updating status locally
+        // or creating a separate API call if needed
         return Result.failure(Exception("Decline endpoint not available in backend"))
     }
-    
-    suspend fun completeSwapRequest(id: String): Result<SwapRequest> { // UUID as String
+
+    suspend fun completeSwapRequest(id: String): Result<SwapRequest> {
         return try {
             val response = apiService.completeSwapRequest(id)
             if (response.isSuccessful && response.body() != null) {
                 val swapRequest = response.body()!!
-                swapRequestDao.updateSwapRequest(swapRequest)
                 Result.success(swapRequest)
             } else {
                 Result.failure(Exception(response.message() ?: "Failed to complete swap request"))
@@ -78,4 +97,3 @@ class SwapRequestRepository @Inject constructor(
         }
     }
 }
-
