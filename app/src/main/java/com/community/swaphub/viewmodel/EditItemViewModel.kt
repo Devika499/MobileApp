@@ -54,6 +54,8 @@ class EditItemViewModel @Inject constructor(
         category: String,
         type: ItemType,
         location: String,
+        latitude: Double?,       // ✅ Added
+        longitude: Double?,      // ✅ Added
         imageUri: Uri?
     ) {
         viewModelScope.launch {
@@ -68,6 +70,8 @@ class EditItemViewModel @Inject constructor(
                     category = category,
                     type = type,
                     location = location,
+                    latitude = latitude,        // ✅ Forwarded
+                    longitude = longitude,      // ✅ Forwarded
                     imageUri = imageUri
                 ).collect { result ->
                     result.onSuccess {

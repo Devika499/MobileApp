@@ -26,9 +26,6 @@ class ItemViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ItemUiState>(ItemUiState.Idle)
     val uiState: StateFlow<ItemUiState> = _uiState.asStateFlow()
 
-    // ---------------------------------------------------------
-    // LOAD "OTHERS" ITEMS (HomeScreen)
-    // ---------------------------------------------------------
     fun loadItems() {
         viewModelScope.launch {
             _uiState.value = ItemUiState.Loading
@@ -45,17 +42,14 @@ class ItemViewModel @Inject constructor(
         }
     }
 
-    // ---------------------------------------------------------
-    // POST ITEM + IMAGE
-    // ---------------------------------------------------------
     fun postItemWithImage(
         title: String,
         description: String?,
         category: String?,
         type: ItemType,
         location: String?,
-        latitude: Double? = null,
-        longitude: Double? = null,
+        latitude: Double?,   // already added
+        longitude: Double?,  // already added
         imageUri: Uri?
     ) {
         viewModelScope.launch {
@@ -78,9 +72,6 @@ class ItemViewModel @Inject constructor(
         }
     }
 
-    // ---------------------------------------------------------
-    // LOAD SPECIFIC ITEM
-    // ---------------------------------------------------------
     fun loadItem(id: String) {
         viewModelScope.launch {
             _uiState.value = ItemUiState.Loading
@@ -97,9 +88,6 @@ class ItemViewModel @Inject constructor(
         }
     }
 
-    // ---------------------------------------------------------
-    // DELETE ITEM
-    // ---------------------------------------------------------
     fun deleteItem(id: String) {
         viewModelScope.launch {
             _uiState.value = ItemUiState.Loading
@@ -112,7 +100,6 @@ class ItemViewModel @Inject constructor(
         }
     }
 
-    // Add this function to ItemViewModel.kt
     fun loadNearbyItems(latitude: Double, longitude: Double, radiusKm: Double) {
         viewModelScope.launch {
             _uiState.value = ItemUiState.Loading
@@ -129,9 +116,6 @@ class ItemViewModel @Inject constructor(
         }
     }
 
-    // ---------------------------------------------------------
-    // REQUEST SWAP
-    // ---------------------------------------------------------
     fun requestSwap(itemId: String) {
         viewModelScope.launch {
             val currentItem = _selectedItem.value

@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.first
 object AppModule {
     
     // Base URL - Update this with your Spring Boot backend URL
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    private const val BASE_URL = "http://192.168.206.60:8080/"
 
     // For Android Emulator
     // For real device, use your computer's IP: "http://192.168.x.x:8080/"
@@ -121,10 +121,13 @@ object AppModule {
 
 
     @Provides
-    @Singleton
-    fun provideSwapRequestRepository(apiService: ApiService): SwapRequestRepository {
-        return SwapRequestRepository(apiService)
+    fun provideSwapRequestRepository(
+        apiService: ApiService,
+        authRepository: AuthRepository
+    ): SwapRequestRepository {
+        return SwapRequestRepository(apiService, authRepository)
     }
+
 
     @Provides
     @Singleton

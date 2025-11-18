@@ -18,9 +18,6 @@ class ItemRepository @Inject constructor(
     private val context: Context
 ) {
 
-    // ---------------------------------------------
-    // 1️⃣ LOAD "OTHERS" ITEMS (Fix for Home screen)
-    // ---------------------------------------------
     fun getAvailableItems(): Flow<Result<List<Item>>> = flow {
         try {
             val response = apiService.getOthersItems()
@@ -46,9 +43,6 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // ---------------------------------------------
-    // 2️⃣ LOAD SINGLE ITEM
-    // ---------------------------------------------
     fun getItem(id: String): Flow<Result<Item>> = flow {
         try {
             val response = apiService.getItem(id)
@@ -67,7 +61,6 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // Add this function to ItemRepository.kt
     fun getNearbyItems(latitude: Double, longitude: Double, radiusKm: Double): Flow<Result<List<Item>>> = flow {
         try {
             val response = apiService.getNearbyItems(latitude, longitude, radiusKm)
@@ -93,9 +86,9 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // --------------------------------------------------------------------
-    // 3️⃣ POST ITEM WITH IMAGE (Corrected with ContentResolver)
-    // --------------------------------------------------------------------
+    // ===============================================================
+    // POST ITEM WITH IMAGE + LOCATION (latitude, longitude ADDED)
+    // ===============================================================
     suspend fun postItemWithImage(
         title: String,
         description: String?,
@@ -107,7 +100,6 @@ class ItemRepository @Inject constructor(
         imageUri: Uri?
     ): Result<Item> {
         return try {
-
             val text = "text/plain".toMediaType()
 
             val titlePart = RequestBody.create(text, title)
@@ -116,8 +108,10 @@ class ItemRepository @Inject constructor(
             val typePart = RequestBody.create(text, type.name)
             val locationPart = location?.let { RequestBody.create(text, it) }
 
-            val imagePart: MultipartBody.Part? = imageUri?.let { uri ->
+            val latPart = latitude?.let { RequestBody.create(text, it.toString()) }   // ✅ Added
+            val lngPart = longitude?.let { RequestBody.create(text, it.toString()) } // ✅ Added
 
+            val imagePart: MultipartBody.Part? = imageUri?.let { uri ->
                 val inputStream = context.contentResolver.openInputStream(uri)
                     ?: return Result.failure(Exception("Cannot open image"))
 
@@ -135,7 +129,7 @@ class ItemRepository @Inject constructor(
 
             val response = apiService.postItem(
                 titlePart, descPart, categoryPart, typePart,
-                locationPart, null, null, imagePart
+                locationPart, latPart, lngPart, imagePart
             )
 
             if (response.isSuccessful && response.body() != null) {
@@ -151,9 +145,6 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // ---------------------------------------------
-    // 4️⃣ DELETE ITEM
-    // ---------------------------------------------
     suspend fun deleteItem(id: String): Result<Unit> {
         return try {
             val response = apiService.deleteItem(id)
@@ -168,9 +159,9 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // ---------------------------------------------
-    // 5️⃣ UPDATE ITEM (image included)
-    // ---------------------------------------------
+    // ===============================================================
+    // UPDATE ITEM (latitude + longitude ADDED)
+    // ===============================================================
     suspend fun updateItem(
         itemId: String,
         title: String,
@@ -178,6 +169,8 @@ class ItemRepository @Inject constructor(
         category: String?,
         type: ItemType,
         location: String?,
+        latitude: Double?,          // ✅ Added
+        longitude: Double?,         // ✅ Added
         imageUri: Uri?
     ): Flow<Result<Item>> = flow {
         try {
@@ -188,6 +181,10 @@ class ItemRepository @Inject constructor(
             val categoryPart = category?.let { RequestBody.create(textPlain, it) }
             val typePart = RequestBody.create(textPlain, type.name)
             val locationPart = location?.let { RequestBody.create(textPlain, it) }
+
+            // NEW
+            val latPart = latitude?.let { RequestBody.create(textPlain, it.toString()) }
+            val lngPart = longitude?.let { RequestBody.create(textPlain, it.toString()) }
 
             val imagePart = imageUri?.let { uri ->
                 val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
@@ -202,8 +199,8 @@ class ItemRepository @Inject constructor(
                 category = categoryPart,
                 type = typePart,
                 location = locationPart,
-                latitude = null,
-                longitude = null,
+                latitude = latPart,       // ✅ Added
+                longitude = lngPart,      // ✅ Added
                 imageFile = imagePart
             )
 
@@ -219,9 +216,6 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // ---------------------------------------------
-    // 6️⃣ UPDATE ITEM STATUS
-    // ---------------------------------------------
     suspend fun updateItemStatus(item: Item, newStatus: String): Result<Item> {
         return try {
             val typePlain = "text/plain".toMediaType()
@@ -257,9 +251,6 @@ class ItemRepository @Inject constructor(
         }
     }
 
-    // ---------------------------------------------
-    // 7️⃣ MY ITEMS
-    // ---------------------------------------------
     fun getMyItems(): Flow<Result<List<Item>>> = flow {
         try {
             val response = apiService.getMyItems()

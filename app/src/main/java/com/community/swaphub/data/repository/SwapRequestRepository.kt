@@ -8,8 +8,14 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
 class SwapRequestRepository @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val authRepository: AuthRepository   // ✅ added
 ) {
+    suspend fun getCurrentUserId(): String? {
+        return authRepository.getCurrentUserIdSync()
+    }
+
+
     suspend fun createSwapRequest(requestedItemId: String, requesterId: String): Result<SwapRequest> {
         return try {
             if (requestedItemId.isBlank() || requesterId.isBlank()) {
@@ -77,9 +83,6 @@ class SwapRequestRepository @Inject constructor(
     }
 
     suspend fun declineSwapRequest(id: String): Result<SwapRequest> {
-        // Since backend doesn't have decline endpoint, we'll return an error
-        // You could implement a custom solution like updating status locally
-        // or creating a separate API call if needed
         return Result.failure(Exception("Decline endpoint not available in backend"))
     }
 

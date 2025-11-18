@@ -33,7 +33,6 @@ fun ProfileScreen(
     val currentUser by authViewModel.currentUser.collectAsState()
     val userItems by viewModel.userItems.collectAsState()
     val allUserItems by viewModel.allUserItems.collectAsState()
-    val points by viewModel.points.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
     val sheetState = rememberModalBottomSheetState()
@@ -48,9 +47,10 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         authViewModel.refreshCurrentUserIfNeeded()
         viewModel.loadMyItems()
-        currentUser?.id?.let { viewModel.loadPoints(it) }
+        // ❌ Removed: loading points
     }
 
+    // Bottom sheet for editing profile
     if (showEditSheet && currentUser != null) {
         ModalBottomSheet(
             onDismissRequest = { showEditSheet = false },
@@ -81,7 +81,6 @@ fun ProfileScreen(
 
                 Button(
                     onClick = {
-                        // Update user
                         val updated = currentUser!!.copy(
                             name = editName,
                             location = editLocation
@@ -114,7 +113,7 @@ fun ProfileScreen(
                 actions = {
                     IconButton(onClick = {
                         viewModel.loadMyItems()
-                        currentUser?.id?.let { viewModel.loadPoints(it) }
+                        // ❌ Removed: points reload
                     }) {
                         Icon(Icons.Default.Refresh, "Refresh")
                     }
@@ -130,13 +129,15 @@ fun ProfileScreen(
             )
         }
     ) { padding ->
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+
+            // HEADER CARD (Points Removed)
             item {
-                // BEAUTIFUL HEADER CARD
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -178,15 +179,7 @@ fun ProfileScreen(
 
                         Spacer(Modifier.height(12.dp))
 
-                        Text(
-                            "$points Points",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        // EDIT PROFILE BUTTON
+                        // EDIT BUTTON
                         OutlinedButton(
                             onClick = {
                                 editName = currentUser?.name ?: ""

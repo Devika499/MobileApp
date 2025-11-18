@@ -28,8 +28,8 @@ fun ItemCard(
     modifier: Modifier = Modifier
 ) {
     val fixedUrl = item.imageUrl
-        ?.replace("localhost", "10.0.2.2")
-        ?.replace("127.0.0.1", "10.0.2.2")
+        ?.replace("localhost", "192.168.206.60")
+        ?.replace("127.0.0.1", "192.168.206.60")
 
     val finalImageUrl = fixedUrl ?: "https://via.placeholder.com/150"
 

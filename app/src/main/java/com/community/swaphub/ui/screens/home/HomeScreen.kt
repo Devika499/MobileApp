@@ -1,5 +1,7 @@
 package com.community.swaphub.ui.screens.home
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,15 +24,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.community.swaphub.ui.components.CategoryChip
 import com.community.swaphub.ui.components.ItemCard
 import com.community.swaphub.viewmodel.ChatViewModel
 import com.community.swaphub.viewmodel.ItemViewModel
 import com.community.swaphub.viewmodel.SwapRequestViewModel
+import com.google.android.gms.location.LocationServices
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +63,8 @@ fun HomeScreen(
     var selectedRadius by remember { mutableStateOf(10f) } // Default 10km as Float
     var showRadiusDialog by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     // Debug: Compare auth user and chat user
     LaunchedEffect(authUser, chatCurrentUser) {
         println("DEBUG: HomeScreen - Auth user: ${authUser?.id}, Chat user: ${chatCurrentUser?.id}")
@@ -80,8 +87,51 @@ fun HomeScreen(
                 swapRequestViewModel.loadSwapRequests()
             }
             HomeFilter.NEARBY_ITEMS -> {
-                // We'll load nearby items when radius is selected
+                // We'll load nearby items when radius is selected via the dialog confirm button
             }
+        }
+    }
+
+    // Helper: try to get last known location and call loadNearbyItems
+    fun loadNearbyWithDeviceLocation(radiusKm: Double) {
+        // default fallback coords (Kochi)
+        val fallbackLat = 9.9312
+        val fallbackLng = 76.2673
+
+        // check permission
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasFineLocation) {
+            // fallback if permission not granted
+            println("DEBUG: location permission not granted, using fallback coords")
+            itemViewModel.loadNearbyItems(fallbackLat, fallbackLng, radiusKm)
+            return
+        }
+
+        try {
+            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+            fusedClient.lastLocation
+                .addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        val lat = loc.latitude
+                        val lng = loc.longitude
+                        println("DEBUG: device location found: $lat, $lng — loading nearby")
+                        itemViewModel.loadNearbyItems(lat, lng, radiusKm)
+                    } else {
+                        println("DEBUG: lastLocation is null, using fallback coords")
+                        itemViewModel.loadNearbyItems(fallbackLat, fallbackLng, radiusKm)
+                    }
+                }
+                .addOnFailureListener { ex ->
+                    println("DEBUG: failed to get lastLocation: ${ex.message}, using fallback")
+                    itemViewModel.loadNearbyItems(fallbackLat, fallbackLng, radiusKm)
+                }
+        } catch (e: Exception) {
+            println("DEBUG: exception getting location: ${e.message}, using fallback")
+            itemViewModel.loadNearbyItems(fallbackLat, fallbackLng, radiusKm)
         }
     }
 
@@ -130,10 +180,8 @@ fun HomeScreen(
                 FilledTonalButton(
                     onClick = {
                         showRadiusDialog = false
-                        // Load nearby items with selected radius
-                        val defaultLat = 9.9312 // Example: Kochi latitude
-                        val defaultLng = 76.2673 // Example: Kochi longitude
-                        itemViewModel.loadNearbyItems(defaultLat, defaultLng, selectedRadius.toDouble())
+                        // Try to use device location; fallback to default coords if permission/loc missing
+                        loadNearbyWithDeviceLocation(selectedRadius.toDouble())
                     },
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
@@ -172,49 +220,61 @@ fun HomeScreen(
                     scrolledContainerColor = MaterialTheme.colorScheme.surface
                 ),
                 actions = {
-                    // Chat button to show conversations list
-                    IconButton(
-                        onClick = onNavigateToConversations,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 12.dp)
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Chat,
-                            contentDescription = "Conversations",
-                            tint = MaterialTheme.colorScheme.tertiary
-                        )
+
+                        IconButton(
+                            onClick = onNavigateToConversations,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = "Chat",
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onNavigateToNotifications,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f))
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Notifications,
+                                contentDescription = "Notifications",
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onNavigateToProfile,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Person,
+                                contentDescription = "Profile",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
-                    // Notifications button
-                    IconButton(
-                        onClick = onNavigateToNotifications,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                    ) {
-                        Icon(
-                            Icons.Filled.Notifications,
-                            contentDescription = "Notifications",
-                            tint = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                    // Profile button
-                    IconButton(
-                        onClick = onNavigateToProfile,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                    ) {
-                        Icon(
-                            Icons.Filled.Person,
-                            contentDescription = "Profile",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+
                 }
+
             )
         },
         floatingActionButton = {

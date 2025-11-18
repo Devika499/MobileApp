@@ -42,8 +42,8 @@ interface ApiService {
         @Part("category") category: RequestBody?,
         @Part("type") type: RequestBody,
         @Part("location") location: RequestBody?,
-        @Part("latitude") latitude: RequestBody?,
-        @Part("longitude") longitude: RequestBody?,
+        @Part("latitude") latitude: RequestBody?,     // ✅ added
+        @Part("longitude") longitude: RequestBody?,   // ✅ added
         @Part imageFile: MultipartBody.Part? = null
     ): Response<Item>
 
@@ -56,10 +56,11 @@ interface ApiService {
         @Part("category") category: RequestBody?,
         @Part("type") type: RequestBody,
         @Part("location") location: RequestBody?,
-        @Part("latitude") latitude: RequestBody?,
-        @Part("longitude") longitude: RequestBody?,
-        @Part imageFile: MultipartBody.Part? = null
+        @Part("latitude") latitude: RequestBody?,      // ✅ added
+        @Part("longitude") longitude: RequestBody?,    // ✅ added
+        @Part imageFile: MultipartBody.Part?
     ): Response<Item>
+
 
     @DELETE("api/items/{id}")
     suspend fun deleteItem(@Path("id") id: String): Response<Unit>

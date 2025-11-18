@@ -28,16 +28,29 @@ class SwapRequestViewModel @Inject constructor(
     fun loadSwapRequests() {
         viewModelScope.launch {
             _uiState.value = SwapRequestUiState.Loading
+
             swapRequestRepository.getMySwapRequests().collect { result ->
                 result.onSuccess { requests ->
-                    _swapRequests.value = requests
+
+                    val currentUserId = swapRequestRepository.getCurrentUserId()  // suspend call now allowed
+
+                    val filtered = if (currentUserId != null) {
+                        requests.filter { it.requesterId == currentUserId }
+                    } else emptyList()
+
+                    _swapRequests.value = filtered
                     _uiState.value = SwapRequestUiState.Success
+
                 }.onFailure { error ->
-                    _uiState.value = SwapRequestUiState.Error(error.message ?: "Failed to load swap requests")
+                    _uiState.value = SwapRequestUiState.Error(
+                        error.message ?: "Failed to load swap requests"
+                    )
                 }
             }
         }
     }
+
+
 
     // For home screen - gets only items requested by the current user
     fun loadMyRequestedItems() {
@@ -48,7 +61,9 @@ class SwapRequestViewModel @Inject constructor(
                     _myRequestedItems.value = requests
                     _uiState.value = SwapRequestUiState.Success
                 }.onFailure { error ->
-                    _uiState.value = SwapRequestUiState.Error(error.message ?: "Failed to load your requested items")
+                    _uiState.value = SwapRequestUiState.Error(
+                        error.message ?: "Failed to load your requested items"
+                    )
                 }
             }
         }
@@ -59,7 +74,9 @@ class SwapRequestViewModel @Inject constructor(
             _uiState.value = SwapRequestUiState.Loading
 
             if (requestedItemId.isBlank() || requesterId.isBlank()) {
-                _uiState.value = SwapRequestUiState.Error("Cannot create swap request: Invalid item or user ID")
+                _uiState.value = SwapRequestUiState.Error(
+                    "Cannot create swap request: Invalid item or user ID"
+                )
                 return@launch
             }
 
@@ -67,7 +84,9 @@ class SwapRequestViewModel @Inject constructor(
             _uiState.value = if (result.isSuccess) {
                 SwapRequestUiState.Success
             } else {
-                SwapRequestUiState.Error(result.exceptionOrNull()?.message ?: "Failed to create swap request")
+                SwapRequestUiState.Error(
+                    result.exceptionOrNull()?.message ?: "Failed to create swap request"
+                )
             }
         }
     }
@@ -76,8 +95,11 @@ class SwapRequestViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = SwapRequestUiState.Loading
             val result = swapRequestRepository.acceptSwapRequest(id)
-            _uiState.value = if (result.isSuccess) SwapRequestUiState.Success
-            else SwapRequestUiState.Error(result.exceptionOrNull()?.message ?: "Failed to accept swap request")
+            _uiState.value =
+                if (result.isSuccess) SwapRequestUiState.Success
+                else SwapRequestUiState.Error(
+                    result.exceptionOrNull()?.message ?: "Failed to accept swap request"
+                )
         }
     }
 
@@ -85,8 +107,11 @@ class SwapRequestViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = SwapRequestUiState.Loading
             val result = swapRequestRepository.declineSwapRequest(id)
-            _uiState.value = if (result.isSuccess) SwapRequestUiState.Success
-            else SwapRequestUiState.Error(result.exceptionOrNull()?.message ?: "Failed to decline swap request")
+            _uiState.value =
+                if (result.isSuccess) SwapRequestUiState.Success
+                else SwapRequestUiState.Error(
+                    result.exceptionOrNull()?.message ?: "Failed to decline swap request"
+                )
         }
     }
 
@@ -94,8 +119,11 @@ class SwapRequestViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = SwapRequestUiState.Loading
             val result = swapRequestRepository.completeSwapRequest(id)
-            _uiState.value = if (result.isSuccess) SwapRequestUiState.Success
-            else SwapRequestUiState.Error(result.exceptionOrNull()?.message ?: "Failed to complete swap request")
+            _uiState.value =
+                if (result.isSuccess) SwapRequestUiState.Success
+                else SwapRequestUiState.Error(
+                    result.exceptionOrNull()?.message ?: "Failed to complete swap request"
+                )
         }
     }
 

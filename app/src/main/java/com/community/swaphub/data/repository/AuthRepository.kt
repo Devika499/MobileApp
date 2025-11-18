@@ -17,6 +17,10 @@ class AuthRepository @Inject constructor(
     private val userDao: UserDao,
     private val preferencesManager: PreferencesManager
 ) {
+    suspend fun getCurrentUserIdSync(): String? {
+        return preferencesManager.userId.first()
+    }
+
 
     // ------------------ REGISTER ------------------
     suspend fun register(
